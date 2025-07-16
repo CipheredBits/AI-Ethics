@@ -1,0 +1,30 @@
+Ethical AI Use in Healthcare
+“Ensuring Responsible AI Deployment in Healthcare”
+
+1. Patient Consent Protocols
+
+All AI systems handling patient data must obtain explicit, informed consent before data collection and use.
+
+Consent forms should be written in clear, accessible language explaining what data is collected, how it will be used, and any associated risks.
+
+Patients must have the right to opt out or withdraw consent at any time without affecting their access to medical services.
+
+2. Bias Mitigation Strategies
+
+Datasets must be audited regularly for demographic imbalances that could lead to biased predictions (e.g., race, gender, age).
+
+Use bias detection tools (e.g., AI Fairness 360) to measure disparate impact, false positive/negative rates, and other fairness metrics.
+
+Retrain models with diverse, representative data and apply de-biasing algorithms where necessary.
+
+3. Transparency Requirements
+
+Make AI system decision-making processes explainable to medical staff and patients. Use interpretable models or post-hoc explanations to clarify outcomes.
+
+Maintain clear documentation on how AI models were developed, including data sources, training methods, and known limitations.
+
+Establish audit trails for AI-assisted diagnoses and treatment recommendations to ensure accountability.
+
+Conclusion:
+Implementing these protocols fosters trust, protects patient rights, and minimizes harm. Responsible AI in healthcare should prioritize fairness, accountability, and patient well-being.
+
