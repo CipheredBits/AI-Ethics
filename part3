@@ -1,0 +1,90 @@
+pip install aif360 pandas matplotlib seaborn scikit-learn
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from aif360.datasets import CompasDataset
+from aif360.metrics import BinaryLabelDatasetMetric, ClassificationMetric
+from aif360.algorithms.preprocessing import Reweighing
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+# Load the dataset
+dataset = CompasDataset()
+
+# Define privileged (Caucasian) and unprivileged (African-American) groups
+privileged_groups = [{'race': 1}]  # Caucasian
+unprivileged_groups = [{'race': 0}]  # African-American
+
+# Basic fairness metrics before any mitigation
+metric = BinaryLabelDatasetMetric(dataset, unprivileged_groups=unprivileged_groups, privileged_groups=privileged_groups)
+
+print("### FAIRNESS METRICS (Original Dataset) ###")
+print("Disparate Impact:", round(metric.disparate_impact(), 3))
+print("Statistical Parity Difference:", round(metric.statistical_parity_difference(), 3))
+
+# Preprocessing features for classifier
+df = dataset.convert_to_dataframe()[0]
+X = df.drop(columns=['two_year_recid', 'race'])
+y = df['two_year_recid']
+
+# Scale features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Train/Test Split (simple 80/20)
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# Logistic Regression Classifier
+clf = LogisticRegression()
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+
+# Reconstruct prediction dataset
+from aif360.datasets import BinaryLabelDataset
+test_df = df.iloc[y_test.index]
+pred_dataset = BinaryLabelDataset(df=pd.DataFrame(X_test, columns=X.columns), 
+                                  label_names=['two_year_recid'], 
+                                  protected_attribute_names=['race'], 
+                                  scores=y_pred)
+
+# Add predictions to a copy of the test set for fairness evaluation
+dataset_pred = dataset.copy()
+dataset_pred.labels = y_pred.reshape(-1,1)
+
+# Classification metrics
+classified_metric = ClassificationMetric(dataset, dataset_pred,
+                                         unprivileged_groups=unprivileged_groups,
+                                         privileged_groups=privileged_groups)
+
+print("\n### CLASSIFICATION FAIRNESS METRICS ###")
+print("Equal Opportunity Difference:", round(classified_metric.equal_opportunity_difference(), 3))
+print("Average Odds Difference:", round(classified_metric.average_odds_difference(), 3))
+print("False Positive Rate Difference:", round(classified_metric.false_positive_rate_difference(), 3))
+
+# Visualization: False Positive Rate by Race
+fpr_unpriv = classified_metric.false_positive_rate(privileged=False)
+fpr_priv = classified_metric.false_positive_rate(privileged=True)
+
+sns.barplot(x=["African-American", "Caucasian"], y=[fpr_unpriv, fpr_priv])
+plt.title("False Positive Rate by Race")
+plt.ylabel("False Positive Rate")
+plt.show()
+
+# Mitigation using Reweighing
+RW = Reweighing(unprivileged_groups=unprivileged_groups,
+                privileged_groups=privileged_groups)
+dataset_transf = RW.fit_transform(dataset)
+
+# Evaluate metrics after reweighing
+metric_transf = BinaryLabelDatasetMetric(dataset_transf,
+                                         unprivileged_groups=unprivileged_groups,
+                                         privileged_groups=privileged_groups)
+
+print("\n### AFTER REWEIGHING ###")
+print("Disparate Impact:", round(metric_transf.disparate_impact(), 3))
+print("Statistical Parity Difference:", round(metric_transf.statistical_parity_difference(), 3))
+
+
